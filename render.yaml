@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: freelancer-portfolio-api
+    env: dotnet
+    plan: free
+    buildCommand: "dotnet publish FreelancerPortfolio/FreelancerPortfolio.csproj -c Release -o out"
+    startCommand: "dotnet out/FreelancerPortfolio.dll"
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: JWT__SecretKey
+        sync: false
+      - key: JWT__Issuer
+        value: https://freelancer-portfolio-api.onrender.com
+      - key: JWT__Audience
+        value: FreelancerPortfolioAPI
+      - key: JWT__AccessTokenExpireMinutes
+        value: "15"
+      - key: JWT__RefreshTokenExpireDays
+        value: "7"
+      - key: Cors__AllowedOrigins
+        sync: false
