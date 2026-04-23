@@ -1,6 +1,6 @@
 # Freelancer Portfolio API
 
-A comprehensive ASP.NET Core 8.0 Web API for managing a freelancer's portfolio. This API provides endpoints for managing projects, categories, technologies, and admin authentication.
+A production-ready ASP.NET Core 8.0 Web API for managing a freelancer's portfolio. Deployed on **Render** with **Neon PostgreSQL** as the database provider.
 
 ## Architecture Overview
 
@@ -8,223 +8,272 @@ This project follows a **Layered Architecture** pattern with clear separation of
 
 ```
 FreelancerPortfolio/
-??? Entities/              # Domain models
-??? Data/                  # EF Core DbContext
-??? Repositories/          # Data access layer
-?   ??? Interfaces/
-?   ??? Implementations/
-??? Services/              # Business logic layer
-?   ??? Interfaces/
-?   ??? Implementations/
-??? DTOs/                  # Data Transfer Objects
-??? Controllers/           # API endpoints
-??? Validators/            # FluentValidation rules
-??? Utilities/             # Helper classes
-??? Constants/             # Constants
-??? Middleware/            # Custom middleware
-??? Mappings/              # AutoMapper profiles
-??? Program.cs             # Application startup
+├── Entities/              # Domain models
+├── Data/                  # EF Core DbContext + Migrations
+├── Repositories/          # Data access layer
+│   ├── Interfaces/
+│   └── Implementations/
+├── Services/              # Business logic layer
+│   ├── Interfaces/
+│   └── Implementations/
+├── DTOs/                  # Data Transfer Objects
+├── Controllers/           # API endpoints
+├── Validators/            # FluentValidation rules
+├── Utilities/             # Helper classes (Slug, Password)
+├── Constants/             # Application constants
+├── Middleware/            # Global exception handling
+├── Mappings/              # AutoMapper profiles
+└── Program.cs             # Application startup
 ```
-
-## Key Features
-
-- **RESTful API** with clean endpoints
-- **JWT Authentication** for admin users
-- **Entity Framework Core** with SQL Server
-- **FluentValidation** for input validation
-- **AutoMapper** for object mapping
-- **Global Exception Handling** middleware
-- **CORS** support for cross-origin requests
 
 ## Technology Stack
 
-- **Framework**: ASP.NET Core 8.0
-- **Database**: SQL Server (via Entity Framework Core)
-- **Authentication**: JWT (JSON Web Tokens)
-- **Validation**: FluentValidation
-- **Mapping**: AutoMapper
-- **ORM**: Entity Framework Core 8.0
-
-## NuGet Packages
-
-- Microsoft.EntityFrameworkCore.SqlServer (8.0.0)
-- Microsoft.EntityFrameworkCore.Tools (8.0.0)
-- FluentValidation (11.9.0)
-- FluentValidation.DependencyInjectionExtensions (11.9.0)
-- AutoMapper (13.0.1)
-- AutoMapper.Extensions.Microsoft.DependencyInjection (12.0.1)
-- System.IdentityModel.Tokens.Jwt (7.1.0)
-- Microsoft.IdentityModel.Tokens (7.1.0)
-- Microsoft.AspNetCore.Authentication.JwtBearer (8.0.0)
-- Swashbuckle.AspNetCore (6.6.2)
-
-## Setup Instructions
-
-### Prerequisites
-- .NET 8.0 SDK
-- SQL Server (LocalDB or full version)
-- Visual Studio 2022 or VS Code
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd FreelancerPortfolio
-   ```
-
-2. **Update appsettings**
-   - Modify `appsettings.json` with your database connection string
-   - Update JWT secret key (must be at least 32 characters)
-   - Set JWT issuer and audience URLs
-
-3. **Create and Apply Migrations**
-   ```bash
-   dotnet ef migrations add InitialCreate
-   dotnet ef database update
-   ```
-
-4. **Run the Application**
-   ```bash
-   dotnet run
-   ```
-
-The API will be available at `https://localhost:7001` (or `http://localhost:5000`)
+| Component         | Technology                           |
+|-------------------|--------------------------------------|
+| Framework         | ASP.NET Core 8.0                     |
+| ORM               | Entity Framework Core 8.0            |
+| Database          | Neon PostgreSQL (via Npgsql)         |
+| Authentication    | JWT (JSON Web Tokens + Refresh)      |
+| Validation        | FluentValidation 11.x                |
+| Mapping           | AutoMapper 16.x                      |
+| Password Hashing  | BCrypt.Net-Next (work factor 12)     |
+| Rate Limiting     | Built-in .NET 7+ Rate Limiter        |
+| Logging           | Serilog (Console sink)               |
+| API Docs          | Swagger/OpenAPI (development only)   |
+| Health Checks     | AspNetCore.HealthChecks.NpgSql       |
 
 ## API Endpoints
 
+### Authentication
+| Method | Endpoint              | Auth Required | Description        |
+|--------|----------------------|---------------|--------------------|
+| POST   | `/api/auth/login`    | No            | Login admin user   |
+| POST   | `/api/auth/refresh`  | No            | Refresh JWT token  |
+| POST   | `/api/auth/logout`   | Yes           | Logout + revoke    |
+
 ### Projects
-- `GET /api/project` - Get all projects
-- `GET /api/project/{id}` - Get project by ID
-- `GET /api/project/slug/{slug}` - Get project by slug
-- `GET /api/project/published` - Get published projects
-- `GET /api/project/category/{categoryId}` - Get projects by category
-- `GET /api/project/technology/{technologyId}` - Get projects by technology
-- `POST /api/project` - Create project (Admin)
-- `PUT /api/project/{id}` - Update project (Admin)
-- `DELETE /api/project/{id}` - Delete project (Admin)
+| Method | Endpoint                              | Auth Required | Description              |
+|--------|--------------------------------------|---------------|--------------------------|
+| GET    | `/api/project`                        | No            | Get all projects         |
+| GET    | `/api/project/published`              | No            | Get published projects   |
+| GET    | `/api/project/{id}`                   | No            | Get project by ID        |
+| GET    | `/api/project/slug/{slug}`            | No            | Get project by slug      |
+| GET    | `/api/project/category/{categoryId}`  | No            | Filter by category       |
+| GET    | `/api/project/technology/{techId}`    | No            | Filter by technology     |
+| POST   | `/api/project`                        | Yes           | Create project (Admin)   |
+| PUT    | `/api/project/{id}`                   | Yes           | Update project (Admin)   |
+| DELETE | `/api/project/{id}`                   | Yes           | Delete project (Admin)   |
 
 ### Categories
-- `GET /api/category` - Get all categories
-- `GET /api/category/{id}` - Get category by ID
-- `GET /api/category/slug/{slug}` - Get category by slug
-- `POST /api/category` - Create category (Admin)
-- `PUT /api/category/{id}` - Update category (Admin)
-- `DELETE /api/category/{id}` - Delete category (Admin)
+| Method | Endpoint               | Auth Required | Description        |
+|--------|------------------------|---------------|--------------------|
+| GET    | `/api/category`         | No            | Get all categories |
+| GET    | `/api/category/{id}`    | No            | Get by ID          |
+| GET    | `/api/category/slug/{s}`| No            | Get by slug        |
+| POST   | `/api/category`         | Yes           | Create (Admin)     |
+| PUT    | `/api/category/{id}`    | Yes           | Update (Admin)     |
+| DELETE | `/api/category/{id}`    | Yes           | Delete (Admin)     |
 
 ### Technologies
-- `GET /api/technology` - Get all technologies
-- `GET /api/technology/{id}` - Get technology by ID
-- `GET /api/technology/slug/{slug}` - Get technology by slug
-- `POST /api/technology` - Create technology (Admin)
-- `PUT /api/technology/{id}` - Update technology (Admin)
-- `DELETE /api/technology/{id}` - Delete technology (Admin)
+| Method | Endpoint                | Auth Required | Description        |
+|--------|-------------------------|---------------|--------------------|
+| GET    | `/api/technology`        | No            | Get all            |
+| GET    | `/api/technology/{id}`   | No            | Get by ID          |
+| GET    | `/api/technology/slug/{s}` | No          | Get by slug        |
+| POST   | `/api/technology`        | Yes           | Create (Admin)     |
+| PUT    | `/api/technology/{id}`   | Yes           | Update (Admin)     |
+| DELETE | `/api/technology/{id}`   | Yes           | Delete (Admin)     |
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/logout` - Logout (revoke token)
+### Health
+| Method | Endpoint  | Description                      |
+|--------|-----------|----------------------------------|
+| GET    | `/health` | Health check (Render uses this)  |
 
-## Configuration
+---
 
-### appsettings.json
+## Local Development Setup
+
+### Prerequisites
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- PostgreSQL (local or Docker) **or** a free [Neon](https://neon.tech) database
+- `dotnet-ef` CLI tool
+
+### 1. Install EF Core CLI
+```bash
+dotnet tool install --global dotnet-ef
+```
+
+### 2. Clone and configure
+```bash
+git clone <repository-url>
+cd FreelancerPortfolio_SimpleLayeredArchitecture
+```
+
+Edit `FreelancerPortfolio/appsettings.Development.json` and set your local PostgreSQL connection string:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=...;Database=FreelancerPortfolioDb;..."
-  },
-  "JWT": {
-    "SecretKey": "your-secret-key-minimum-32-characters",
-    "Issuer": "https://freelancerportfolio.com",
-    "Audience": "FreelancerPortfolioAPI",
-    "AccessTokenExpireMinutes": 15,
-    "RefreshTokenExpireDays": 7
+    "DefaultConnection": "Host=localhost;Database=FreelancerPortfolioDb;Username=postgres;Password=your_password"
   }
 }
 ```
 
-## Database Schema
-
-### Tables
-- **AdminUsers** - Admin user accounts
-- **RefreshTokens** - JWT refresh tokens
-- **Categories** - Project categories
-- **Technologies** - Technology stack
-- **Projects** - Portfolio projects
-- **ProjectTechnologies** - Many-to-many relationship between projects and technologies
-
-## Entity Relationships
-
-```
-AdminUser (1) ---> (Many) RefreshToken
-Category (1) ---> (Many) Project
-Project (1) ---> (Many) ProjectTechnology (Many) <--- (1) Technology
-```
-
-## Authentication Flow
-
-1. User logs in with username/password ? `POST /api/auth/login`
-2. API returns access token + refresh token
-3. Include access token in Authorization header: `Bearer {accessToken}`
-4. When access token expires, use refresh token ? `POST /api/auth/refresh`
-5. Get new access token + new refresh token
-6. Logout invalidates the JWT ID ? `POST /api/auth/logout`
-
-## Validation
-
-All DTOs are validated using FluentValidation:
-- Project title/description length limits
-- Required fields validation
-- Category and technology uniqueness by slug
-- JWT token validation
-
-## Error Handling
-
-The API uses global exception handling middleware that:
-- Catches all unhandled exceptions
-- Returns consistent error responses
-- Logs errors for debugging
-- Handles validation exceptions specially
-
-## Development
-
-### Database Migrations
-
-Create a new migration:
+### 3. Apply migrations
 ```bash
-dotnet ef migrations add MigrationName
-```
-
-Apply pending migrations:
-```bash
+cd FreelancerPortfolio
 dotnet ef database update
 ```
 
-Remove last migration:
+### 4. Run
 ```bash
-dotnet ef migrations remove
+dotnet run
 ```
 
-### Swagger/OpenAPI
+The API starts at `https://localhost:7001` (or `http://localhost:5000`).  
+Swagger UI is available at: `http://localhost:5000/swagger`
 
-API documentation is available at `/swagger` in development environment.
+**Default dev admin credentials** (auto-seeded in Development):
+- Username: `admin`
+- Password: `Admin@12345`
 
-## Future Enhancements
+---
 
-- [ ] Role-based authorization (Admin roles)
-- [ ] Image upload functionality
-- [ ] Pagination for large result sets
-- [ ] Advanced filtering and search
-- [ ] API rate limiting
-- [ ] Caching layer (Redis)
-- [ ] File storage (Azure Blob Storage)
-- [ ] Email notifications
-- [ ] Social media integration
+## Database Migration Commands
+
+```bash
+# Create a new migration
+dotnet ef migrations add MigrationName
+
+# Apply pending migrations
+dotnet ef database update
+
+# Remove last migration (if not applied)
+dotnet ef migrations remove
+
+# Generate SQL script (for review)
+dotnet ef migrations script
+
+# Apply to a specific connection string
+dotnet ef database update --connection "Host=...;Database=...;"
+```
+
+---
+
+## Neon PostgreSQL Setup
+
+1. Go to [neon.tech](https://neon.tech) and create a free account.
+2. Create a new project → note down the **connection string**.
+3. The connection string format is:
+   ```
+   Host=ep-xxx.us-east-2.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=your_password;SSL Mode=Require
+   ```
+4. Set this as `ConnectionStrings__DefaultConnection` in Render environment variables.
+5. Migrations run automatically on startup.
+
+---
+
+## Render Deployment
+
+### Using render.yaml (recommended)
+The `render.yaml` at the repo root defines the web service configuration.
+
+1. Push this repo to GitHub.
+2. In [Render Dashboard](https://render.com), click **New → Blueprint** and connect your GitHub repo.
+3. Render will detect `render.yaml` and create the service.
+4. Set the secret environment variables in the Render dashboard:
+   - `ConnectionStrings__DefaultConnection` — your Neon connection string
+   - `JWT__SecretKey` — at least 32 random characters
+   - `Cors__AllowedOrigins` — comma-separated list of your Vercel domains
+
+### Manual Setup
+1. Create a **Web Service** in Render.
+2. Connect your GitHub repo.
+3. Configure:
+   - **Build Command:** `dotnet publish FreelancerPortfolio/FreelancerPortfolio.csproj -c Release -o out`
+   - **Start Command:** `dotnet out/FreelancerPortfolio.dll`
+   - **Health Check Path:** `/health`
+4. Add the environment variables listed below.
+
+---
+
+## Vercel Frontend Setup
+
+Configure these in your Vercel project → Settings → Environment Variables:
+- `NEXT_PUBLIC_API_BASE_URL` = `https://your-api.onrender.com`
+
+See the frontend repo for detailed instructions.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Example | Purpose |
+|---|---|---|---|
+| `ConnectionStrings__DefaultConnection` | ✅ | `Host=...;Database=...;Username=...;Password=...;SSL Mode=Require` | Neon PostgreSQL connection |
+| `JWT__SecretKey` | ✅ | `a-random-32-plus-character-string` | JWT signing key (≥32 chars) |
+| `JWT__Issuer` | ✅ | `https://your-api.onrender.com` | JWT issuer claim |
+| `JWT__Audience` | ✅ | `FreelancerPortfolioAPI` | JWT audience claim |
+| `JWT__AccessTokenExpireMinutes` | ❌ | `15` | Access token lifetime (default: 15) |
+| `JWT__RefreshTokenExpireDays` | ❌ | `7` | Refresh token lifetime (default: 7) |
+| `Cors__AllowedOrigins` | ✅ | `https://app.vercel.app,https://custom.com` | Allowed CORS origins (comma-separated) |
+| `ASPNETCORE_ENVIRONMENT` | ✅ | `Production` | Runtime environment |
+| `PORT` | ❌ | `10000` | HTTP port (Render injects this automatically) |
+| `DevSeed__AdminPassword` | ❌ | `Admin@12345` | Dev-only admin seed password |
+
+> **Note:** In ASP.NET Core, double-underscore `__` is used as the section separator when setting config via environment variables (equivalent to `:` in JSON).
+
+---
+
+## Post-Deploy Verification Checklist
+
+- [ ] `GET /health` returns `200 Healthy`
+- [ ] `POST /api/auth/login` with admin credentials returns JWT tokens
+- [ ] `GET /api/project/published` returns `200` (may be empty array initially)
+- [ ] `GET /api/category` returns `200`
+- [ ] `GET /api/technology` returns `200`
+- [ ] Swagger UI is **not** accessible at `/swagger` in production
+- [ ] CORS: frontend domain can call the API without CORS errors
+- [ ] Create a project with the admin token to verify write operations work
+- [ ] Logs visible in Render dashboard
+
+---
+
+## Authentication Flow
+
+1. `POST /api/auth/login` → returns `accessToken` + `refreshToken`
+2. Include `Authorization: Bearer {accessToken}` header for protected endpoints
+3. When access token expires (15 min by default), call `POST /api/auth/refresh` with `refreshToken`
+4. To logout: `POST /api/auth/logout` with `refreshToken`
+
+---
+
+## Error Response Format
+
+All errors follow a consistent JSON contract:
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": ["Field X is required.", "Field Y must be less than 100 characters."],
+  "statusCode": 400
+}
+```
+
+---
+
+## Security Features
+
+- **BCrypt** password hashing with work factor 12
+- **JWT** with configurable expiry and zero clock skew
+- **Refresh token** rotation (single-use, revocable)
+- **Rate limiting** on auth endpoints (10 requests/minute on login/refresh)
+- **Security headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+- **HTTPS forwarded headers** support for Render reverse proxy
+- **FluentValidation** on all input DTOs
+- **Unique slug constraints** in database
+
+---
 
 ## License
 
-This project is licensed under the MIT License.
-
-## Support
-
-For issues or questions, please contact the development team.
+MIT
