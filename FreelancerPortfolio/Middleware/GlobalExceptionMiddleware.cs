@@ -23,7 +23,10 @@ public class GlobalExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
+            // Sanitize user-provided values to prevent log forging
+            var method = SanitizeForLog(context.Request.Method);
+            var path = SanitizeForLog(context.Request.Path.ToString());
+            _logger.LogError(ex, "Unhandled exception for {Method} {Path}", method, path);
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -61,5 +64,12 @@ public class GlobalExceptionMiddleware
         });
 
         await context.Response.WriteAsync(json);
+    }
+
+    private static string SanitizeForLog(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return "(empty)";
+        // Remove newlines and carriage returns to prevent log injection
+        return value.Replace("\r", "\\r").Replace("\n", "\\n");
     }
 }
